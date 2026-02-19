@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Company Email Scraper</title>
+    <style>
+        table, th, td { border: 1px solid black; border-collapse: collapse; padding: 5px; }
+        th { background-color: #f2f2f2; }
+        #status { font-weight: bold; color: green; }
+    </style>
+</head>
+<body>
+    <h2>Company Email Scraper</h2>
+    <form id="uploadForm">
+        <input type="file" name="file" accept=".xlsx" required>
+        <button type="submit">Scrape Emails</button>
+    </form>
+
+    <p id="status"></p>
+    <div id="results"></div>
+    <a id="downloadBtn" href="/download" style="display:none;"><button>Download Excel</button></a>
+
+    <script>
+        const form = document.getElementById("uploadForm");
+        const statusEl = document.getElementById("status");
+        const resultsEl = document.getElementById("results");
+        const downloadBtn = document.getElementById("downloadBtn");
+
+        form.addEventListener("submit", function(e){
+            e.preventDefault();
+            const fileInput = form.querySelector('input[type="file"]');
+            const data = new FormData();
+            data.append('file', fileInput.files[0]);
+
+            fetch("/upload", { method: "POST", body: data })
+            .then(res => res.json())
+            .then(res => {
+                if(res.success){
+                    statusEl.innerText = "Starting scraping...";
+                    pollProgress();
+                }
+            });
+        });
+
+        function pollProgress(){
+            fetch("/progress")
+            .then(res => res.json())
+            .then(data => {
+                statusEl.innerText = data.status;
+                if(data.done){
+                    downloadBtn.style.display = "block";
+                    // Show results table
+                    if(data.results.length > 0){
+                        let html = "<h3>Results:</h3><table><tr><th>URL</th><th>Emails</th></tr>";
+                        data.results.forEach(r=>{
+                            html += `<tr><td>${r.URL}</td><td>${r.Emails}</td></tr>`;
+                        });
+                        html += "</table>";
+                        resultsEl.innerHTML = html;
+                    }
+                } else {
+                    setTimeout(pollProgress, 2000);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
